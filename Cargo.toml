@@ -1,0 +1,9 @@
+[package]
+name = "rpcsnap"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+prost = "0.14.1"
+prost-reflect = "0.16.3"
+prost-types = "0.14.1"
