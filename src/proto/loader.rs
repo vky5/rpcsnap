@@ -1,5 +1,5 @@
-use prost_reflect::DescriptorPool;
-use crate::proto::model::{RpcMethod, Service};
+use prost_reflect::{DescriptorPool, Kind};
+use crate::proto::model::{Message, RpcMethod, Service, FieldKind, Field};
 
 pub fn load() -> Vec<Service> {
     let bytes = include_bytes!("../../descriptor.bin");
@@ -11,10 +11,15 @@ pub fn load() -> Vec<Service> {
         let mut methods = Vec::new();
 
         for method in service.methods() {
+
+            let input_msg = build_message(method.input());
+            let output_msg = build_message(method.output());
+
+
             let temp_method = RpcMethod {
                 name: method.name().to_string(), // all of them return &str that's why to_string() because all struct only accepts String not &str  
-                input_type: method.input().name().to_string(),
-                output_type: method.output().name().to_string(),
+                input_type: input_msg,
+                output_type: output_msg,
             };
 
             methods.push(temp_method);
@@ -29,4 +34,33 @@ pub fn load() -> Vec<Service> {
     }
 
     return services
+}
+
+
+fn build_message(msg: prost_reflect::MessageDescriptor) -> Message {
+    let mut fields = Vec::new();
+
+    for field in msg.fields(){
+        let kind = match field.kind() { // this returns the kind of field
+            Kind::String => FieldKind::String,
+            Kind::Bool => FieldKind::Bool,
+            Kind::Int32 => FieldKind::Int32,
+            Kind::Int64 => FieldKind::Int64,
+            Kind::Double => FieldKind::Double,
+            Kind::Float => FieldKind::Float,
+
+            Kind::Message(m)=> FieldKind::Message(m.name().to_string()),
+
+            _ => continue,
+
+        };
+
+        fields.push(Field{
+            name: field.name().to_string(),
+            kind,
+            repeated: field.is_list(),
+        });
+    }
+
+    Message { name: msg.name().to_string(), fields }
 }

@@ -21,7 +21,8 @@ pub struct Message{
 #[derive(Debug)]
 pub struct Field {
     pub kind : FieldKind,
-    pub name : String
+    pub name : String,
+    pub repeated: bool
 }   
 
 #[derive(Debug)]
@@ -31,9 +32,12 @@ pub enum FieldKind{
     Int64,
     Bool,
     Float,
-    Double
+    Double,
+    Message(String), // enum variant with string field. No way connected to struct
 }
 
+// cardinality - whether the given field is repeated (list) or not 
+// is_list() - checks the cardinality; true = repeated, false - singluar
 
 
 // okay we would need to make enum for the kind but the problem is that that can be nested. And since that 
