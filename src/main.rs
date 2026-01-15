@@ -1,6 +1,5 @@
 mod proto;
-
-use crate::proto::loader;
+mod grpc;
 
 fn main() {
     // loader();

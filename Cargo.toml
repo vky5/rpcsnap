@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+http = "1.4.0"
 prost = "0.14.1"
 prost-reflect = "0.16.3"
 prost-types = "0.14.1"
+tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+tonic = { version = "0.14.2", features = ["transport"] } 
+bytes = "1"
