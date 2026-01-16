@@ -15,7 +15,7 @@ pub struct DynamicProstCodec {
 }
 
 impl DynamicProstCodec {
-    /// Create a new codec for a specific message type
+    // Create a new codec for a specific message type (we dont want same instance of encoder/decoder to be shared)
     pub fn new(descriptor: MessageDescriptor) -> Self {
         Self { descriptor }
     }
@@ -45,15 +45,30 @@ pub struct DynamicProstEncoder;
 
 impl Encoder for DynamicProstEncoder {
     type Item = DynamicMessage;
-    type Error = Status;
+    type Error = Status; // the Error in Result type is actually Status 
 
     fn encode(
         &mut self,
         item: Self::Item,
-        dst: &mut EncodeBuf<'_>,
-    ) -> Result<(), Self::Error> {
+        dst: &mut EncodeBuf<'_>, // variable on which the buffer is written
+    ) -> Result<(), Self::Error> { // return type is none because output in dst
         item.encode(dst)
             .map_err(|e| Status::internal(e.to_string()))
+
+            /*
+
+            What map_err does
+                If the result is:
+                Ok(()) → leave it unchanged
+                Err(e) → transform the error
+
+            
+            equivalent to thsi that |e| thingiy that is called closure nd it is anonymous function
+            fn convert_error(e: EncodeError) -> Status {
+                    Status::internal(e.to_string())
+            }   
+
+            */
     }
 }
 
@@ -81,7 +96,3 @@ impl Decoder for DynamicProstDecoder {
     }
 }
 
-
-/* *
-* 
-*/
