@@ -1,2 +1,4 @@
 pub mod client;
-mod codec;
+pub mod codec;
+
+pub use client::call_unary;

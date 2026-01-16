@@ -1,9 +1,13 @@
+use std::fs;
 use prost_reflect::{DescriptorPool, Kind, DynamicMessage, Value};
-use crate::proto::model::{Message, RpcMethod, Service, FieldKind, Field};
+use crate::proto::model::{Message, RpcMethod, Service, Field};
 
-pub fn load() -> Vec<Service> {
-    let bytes = include_bytes!("../../descriptor.bin");
-    let pool = DescriptorPool::decode(&bytes[..]).unwrap(); // Descriptorpool is all the descriptors from the descriptor bin that was created 
+pub fn load(path: &str) -> Vec<Service> {
+    let bytes = fs::read(path)
+        .expect("failed to read descriptor bin");
+
+    let pool = DescriptorPool::decode(&bytes[..])
+        .expect("failed to decode descriptor pool");
 
     let mut services = Vec::new();
 
@@ -14,7 +18,7 @@ pub fn load() -> Vec<Service> {
 
             let input_msg = build_message(method.input());
             let output_msg = build_message(method.output());
-
+            
 
             let temp_method = RpcMethod {
                 name: method.name().to_string(), // all of them return &str that's why to_string() because all struct only accepts String not &str  
@@ -26,7 +30,7 @@ pub fn load() -> Vec<Service> {
         }
 
         let svc = Service {
-            name: service.name().to_string(),
+            name: service.full_name().to_string(),
             methods,
         };
 
@@ -41,55 +45,55 @@ fn build_message(msg: prost_reflect::MessageDescriptor) -> Message {
     let mut fields = Vec::new();
 
     for field in msg.fields(){
-        let kind = match field.kind() { // this returns the kind of field
-            Kind::String => FieldKind::String,
-            Kind::Bool => FieldKind::Bool,
-            Kind::Int32 => FieldKind::Int32,
-            Kind::Int64 => FieldKind::Int64,
-            Kind::Double => FieldKind::Double,
-            Kind::Float => FieldKind::Float,
+    //     let kind = match field.kind() { // this returns the kind of field
+    //         Kind::String => FieldKind::String,
+    //         Kind::Bool => FieldKind::Bool,
+    //         Kind::Int32 => FieldKind::Int32,
+    //         Kind::Int64 => FieldKind::Int64,
+    //         Kind::Double => FieldKind::Double,
+    //         Kind::Float => FieldKind::Float,
 
-            Kind::Message(m)=> FieldKind::Message(m.name().to_string()),
+    //         Kind::Message(m)=> FieldKind::Message(m.name().to_string()),
 
-            _ => continue,
+    //         _ => continue,
 
-        };
+    //     };
 
         fields.push(Field{
-            name: field.name().to_string(),
-            kind,
+            desc: field.clone(),
+            kind : field.kind(),
             repeated: field.is_list(),
         });
     }
 
-    Message { name: msg.name().to_string(), fields }
+    Message { desc: msg, fields }
 }
 
 
 // Get the values of the schema of the message
-pub fn build_dynamic_message(msg_schema: &Message, pool: &DescriptorPool) -> DynamicMessage {
-    let descriptor = pool.get_message_by_name(&msg_schema.name).expect("Message not found in descriptor pool"); // getting the MessageDescriptor from the MessageSchema return type is option
-    let mut message = DynamicMessage::new(descriptor.clone()); // Create an empty protobuf message value whose shape is defined by this schema // Since we are mutating it that's why it asked for descriptor.clone otherwise for non mutable w could have passed borrowed value
+pub fn build_dynamic_message(msg_schema: &Message) -> DynamicMessage {
+    // let descriptor = pool.get_message_by_name(&msg_schema.name).expect("Message not found in descriptor pool"); // getting the MessageDescriptor from the MessageSchema return type is option
+
+    let mut message = DynamicMessage::new(msg_schema.desc.clone()); // Create an empty protobuf message value whose shape is defined by this schema // Since we are mutating it that's why it asked for descriptor.clone otherwise for non mutable w could have passed borrowed value
 
     for field in &msg_schema.fields{
-        let field_desc = descriptor.get_field_by_name(&field.name).expect("Field not found");
 
         let value  = match &field.kind {
-            FieldKind::String => Value::String("test".to_string()),
-            FieldKind::Bool => Value::Bool(true),
-            FieldKind::Int32=> Value::I32(43),
-            FieldKind::Int64=> Value::I64(13),
-            FieldKind::Float => Value::F32(13.21),
-            FieldKind::Double => Value::F32(22.21),
+            Kind::String => Value::String("test".to_string()),
+            Kind::Bool => Value::Bool(true),
+            Kind::Int32=> Value::I32(43),
+            Kind::Int64=> Value::I64(13),
+            Kind::Float => Value::F32(13.21),
+            Kind::Double => Value::F32(22.21),
 
-            FieldKind::Message(msg_name)=> {
-                let nested_schema = Message {
-                    name: msg_name.clone(),
-                    fields: Vec::new(),
-                };
-
-                let nested_msg = build_dynamic_message(&nested_schema, pool);
+            Kind::Message(nested_desc) => {
+                let nested_schema = build_message(nested_desc.clone());
+                let nested_msg = build_dynamic_message(&nested_schema);
                 Value::Message(nested_msg)
+            }
+            
+            _ => {
+                Value::String(String::new())
             }
 
         };
@@ -99,7 +103,7 @@ pub fn build_dynamic_message(msg_schema: &Message, pool: &DescriptorPool) -> Dyn
             false => value
         };
 
-        message.set_field(&field_desc, final_value);
+        message.set_field(&field.desc, final_value);
     }
 
 
@@ -126,4 +130,4 @@ we dont have struct for response because that is in proto file and no generated
 file for rust is created how will wwe able to understand the structure of it? 
 using field descriptor just like how we did in build message
 
-*/
+*/ 

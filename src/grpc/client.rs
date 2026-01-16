@@ -1,5 +1,5 @@
 use tonic::transport::Channel; // network connection to a gRPC server // after 3 way handshake in http/2 connection is not terminated after complete transmission it remain open until the connection is intentionally closed or one disconnect
-use tonic::{Request, Response}; // hold the message body and metadata (headers)
+use tonic::{Request, Response, Status}; // hold the message body and metadata (headers)
 use http::uri::PathAndQuery; // to identify and create the gRPC's http path
 use prost_reflect::{DynamicMessage, MessageDescriptor};
 use tonic::client::Grpc;
@@ -32,9 +32,11 @@ pub async fn call_unary(
     method_name: &str, // method to be called 
     request_msg: DynamicMessage, // request body that will be encoded by codec in the proper MessageDescriptor format that is stored to us 
     response_descriptor: MessageDescriptor
-) -> DynamicMessage {
+) -> Result<DynamicMessage, Status> {
     let channel = make_channel(addr).await.unwrap(); // create the channel to that address // think of channel like a pipe 
     let mut grpc = Grpc::new(channel);  // this right here is to give the rules to the pipe how things is going to transfer here 
+
+    grpc.ready().await.unwrap();
 
     // Build RPC path: /package.Service/Method
     let path = format!("/{}/{}", service_name, method_name); // /demo.v1.PingService/Ping
@@ -55,7 +57,7 @@ pub async fn call_unary(
         .await
         .unwrap();
 
-    response.into_inner() // remove the gRPC envelope and return only message
+    Ok(response.into_inner()) // remove the gRPC envelope and return only message
 }
 
 // * DynamicMessage → bytes → gRPC → bytes → DynamicMessage // the grpc part needs connection to be made and this is where everything fits in.

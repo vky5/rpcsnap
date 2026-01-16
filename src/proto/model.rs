@@ -1,4 +1,4 @@
-use prost_reflect::{DynamicMessage, MessageDescriptor, Value, Kind};
+use prost_reflect::{DynamicMessage, FieldDescriptor, Kind, MessageDescriptor, Value};
 
 #[derive(Debug)]
 pub struct Service {
@@ -15,28 +15,18 @@ pub struct RpcMethod {
 
 #[derive(Debug)]
 pub struct Message{
-    pub name: String,
+    pub desc: MessageDescriptor,
     pub fields: Vec<Field>
 }
 
 
 #[derive(Debug)]
 pub struct Field {
-    pub kind : FieldKind,
-    pub name : String,
+    pub kind : Kind,
+    pub desc : FieldDescriptor,
     pub repeated: bool
 }   
 
-#[derive(Debug)]
-pub enum FieldKind{
-    String,
-    Int32,
-    Int64,
-    Bool,
-    Float,
-    Double,
-    Message(String), // enum variant with string field. No way connected to struct
-}
 
 // cardinality - whether the given field is repeated (list) or not 
 // is_list() - checks the cardinality; true = repeated, false - singluar
@@ -100,6 +90,7 @@ pub fn print_dynamic_message(
     }
 }
 
+// ! read about smart pointers in rust
 
 
 
