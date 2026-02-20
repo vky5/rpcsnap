@@ -1,129 +1,78 @@
-# 📅 Day 1 Task — rpcSnap
-## 🎯 Objective
+# rpcSnap 📅
 
-Implement **proto discovery**.
+`rpcSnap` is a lightweight, reflection-based CLI tool for making dynamic gRPC calls using `.proto` descriptor files. Unlike traditional gRPC clients, it doesn't require generated code for every service; it discovers services and methods at runtime.
 
-By the end of today, rpcSnap must be able to:
+## 🎯 Features
 
-> Load a `.proto` file and print a list of gRPC services and their RPC methods.
+- **Proto Discovery**: Load `.proto` descriptors and inspect available services and methods.
+- **Dynamic Messaging**: Build and send gRPC requests dynamically based on the descriptor.
+- **Unary Calls**: Supports standard unary gRPC request-response cycles.
+- **Custom Codec**: Features a `DynamicProstCodec` that handles runtime encoding and decoding of Protobuf messages.
 
-Nothing else.
+## 🧱 Architecture
 
----
+The project is built with Rust and leverages several key libraries:
 
-## 🧱 Scope (do NOT exceed this)
+- **[prost-reflect](https://github.com/tokio-rs/prost-reflect)**: Used for runtime induction of Protobuf messages and descriptors.
+- **[tonic](https://github.com/hyperium/tonic)**: Provides the gRPC transport layer.
+- **[tokio](https://tokio.rs/)**: Powers the asynchronous runtime.
 
-You will implement **only**:
+### Project Structure
 
-* Proto file loading
-* Service + RPC method discovery
-* Console output
+- `src/proto/`: Logic for loading descriptors and building dynamic messages.
+- `src/grpc/`: gRPC client implementation and custom dynamic codec.
+- `src/app.rs`: Main application orchestration logic.
 
-### Explicitly out of scope
+## 🚀 Getting Started
 
-* UI
-* gRPC execution
-* Request building
-* JSON mapping
-* Error polish
-* Multiple proto files (single entry file is enough)
+### Prerequisites
 
-If you touch these, you’re over-scoping.
+- **Protoc**: You need the Protocol Buffers compiler to generate descriptor files.
+- **Rust**: Ensure you have the latest stable Rust toolchain installed.
 
----
+### 1. Generate a Descriptor File
 
-## 📁 Files you are allowed to touch today
+`rpcSnap` operates on binary descriptor files (`.bin`). You can generate one from your `.proto` file using `protoc`:
 
-* `src/main.rs`
-* `src/proto/loader.rs`
-* `src/proto/model.rs`
-* `src/proto/mod.rs`
-
-Nothing else.
-
----
-
-## 📐 Functional requirements
-
-1. Given a path to a `.proto` file:
-
-   * parse it
-   * resolve its imports (best-effort is fine)
-2. Discover:
-
-   * service names
-   * RPC method names
-   * input message name
-   * output message name
-3. Map the result into **your own internal structs**
-4. Print output like:
-
-```
-Service: UserService
-  RPC: CreateUser (CreateUserRequest -> CreateUserResponse)
-  RPC: GetUser (GetUserRequest -> GetUserResponse)
+```bash
+protoc --include_imports --descriptor_set_out=descriptor.bin your_service.proto
 ```
 
----
+For the included `ping.proto`:
 
-## 🧠 Constraints (important)
+```bash
+protoc --include_imports --descriptor_set_out=ping.bin ping.proto
+```
 
-* You **must not** expose prost / descriptor types outside `proto/`
-* `proto/model.rs` must define clean structs
-* `loader.rs` returns `Vec<Service>`
-* No globals
-* No unsafe
-* No TODOs left behind
+### 2. Run the Tool
 
----
+Use `cargo run` to execute a gRPC call:
 
-## 🧪 Input assumptions
+```bash
+cargo run -- \
+  --descriptor <path_to_descriptor.bin> \
+  --service <package.ServiceName> \
+  --method <MethodName> \
+  --addr <http://host:port>
+```
 
-You may assume:
+#### Example (using `ping.proto`)
 
-* `.proto` compiles
-* proto3 syntax
-* unary RPCs only
+If you have a server running locally on port 50051:
 
-You may **hardcode** the proto path in `main.rs` for now.
+```bash
+cargo run -- \
+  --descriptor ping.bin \
+  --service demo.v1.PingService \
+  --method Ping \
+  --addr http://127.0.0.1:50051
+```
 
----
+## 🧠 Technical Highlights
 
-## ✅ Acceptance criteria (how I’ll judge)
-
-I will consider this task **done** if:
-
-* `cargo run` prints correct services & RPCs
-* Code is readable
-* No overengineering
-* No leaking of prost types
-* Clear separation of concerns
-
-If it *works but is messy*, I’ll send you back.
+- **Dynamic Decoding**: The tool can decode any gRPC response without knowing the structure at compile time by using the response message descriptor provided in the proto file.
+- **Type-Safe Internal Models**: While using reflection, `rpcSnap` maps Protobuf descriptors into clean internal Rust structs for easier manipulation and printing.
 
 ---
 
-## 🧭 Hints (not instructions)
-
-* `prost-reflect` is your friend
-* Descriptor sets matter
-* Start from “what data do I need?” and work backward
-* Clone early, optimize later
-
----
-
-## 🕕 When to report back
-
-Come back when:
-
-* It compiles
-* It prints output
-* Or you’re **properly stuck** (not “confused”, *stuck*)
-
-When you return, I’ll:
-
-* review your approach
-* point out design mistakes
-* assign **Day 2**
-
-Go.
+_Created by Vaibhav_
